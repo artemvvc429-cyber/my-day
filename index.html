@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Мой день">
+<meta name="theme-color" content="#0b0b0d">
+<title>Мой день</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;background:#0b0b0d;color:#f5f5f7;
+font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif
+}
+main{max-width:700px;margin:auto;padding:22px 16px 40px}
+.top{display:flex;justify-content:space-between}
+.date{color:#999;font-size:14px}
+h1{font-size:34px;margin:4px 0}
+.clock{font-size:28px;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.card{background:#17171b;border:1px solid #29292f;border-radius:22px;padding:17px}
+.label{font-size:13px;color:#999}
+.temp{font-size:31px;font-weight:700;margin-top:5px}
+.weather{font-size:14px;color:#999}
+.section{margin-top:16px}
+.head{display:flex;justify-content:space-between;align-items:center}
+h2{font-size:19px}
+button{
+border:1px solid #303038;background:#202025;color:white;
+border-radius:13px;padding:10px 14px;font-size:15px
+}
+.lesson{
+display:grid;grid-template-columns:65px 1fr auto;
+gap:10px;padding:15px 0;border-bottom:1px solid #29292f
+}
+.time{color:#7c8cff;font-weight:700}
+.subject{font-weight:600}
+.small{color:#999;font-size:13px;margin-top:3px}
+.panel{margin-top:16px}
+input{
+width:100%;padding:11px;background:#101014;
+border:1px solid #303038;border-radius:12px;color:white;
+font-size:16px;margin-top:5px
+}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.hidden{display:none}
+.actions{display:flex;gap:8px;margin-top:12px}
+.primary{background:#7c8cff;border-color:#7c8cff}
+@media(max-width:450px){
+.lesson{grid-template-columns:55px 1fr}
+.end{display:none}
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<div class="top">
+<div>
+<div class="date" id="date"></div>
+<h1>Мой день</h1>
+</div>
+<div class="clock" id="clock"></div>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<div class="label" id="wakeLabel">Утром</div>
+<div class="temp" id="morningTemp">—°</div>
+<div class="weather" id="morningWeather">Загрузка…</div>
+</div>
+
+<div class="card">
+<div class="label" id="backLabel">К возвращению</div>
+<div class="temp" id="backTemp">—°</div>
+<div class="weather" id="backWeather">Загрузка…</div>
+</div>
+
+</div>
+
+<section class="section">
+<div class="head">
+<h2>📚 Сегодня</h2>
+<button onclick="toggleSettings()">⚙️</button>
+</div>
+
+<div class="card" id="schedule"></div>
+</section>
+
+<div class="card panel hidden" id="settings">
+
+<h2>Настройки</h2>
+
+<div class="row">
+<label class="small">
+Просыпаюсь
+<input id="wake" type="time" value="07:30">
+</label>
+
+<label class="small">
+Возвращаюсь
+<input id="back" type="time" value="18:00">
+</label>
+</div>
+
+<div class="row">
+<label class="small">
+Широта
+<input id="lat" type="number" value="55.7961">
+</label>
+
+<label class="small">
+Долгота
+<input id="lon" type="number" value="49.1064">
+</label>
+</div>
+
+<div class="actions">
+<button class="primary" onclick="saveSettings()">Сохранить</button>
+<button onclick="toggleSettings()">Закрыть</button>
+</div>
+
+</div>
+
+</main>
+
+<script>
+
+let lessons=[
+{time:"09:00",end:"10:30",name:"Математика",room:"214"},
+{time:"10:40",end:"12:10",name:"Физика",room:"318"},
+{time:"12:20",end:"13:50",name:"Алгебра",room:"105"},
+{time:"14:10",end:"15:40",name:"Химическая технология",room:"407"}
+];
+
+let settings=JSON.parse(localStorage.getItem("daySettings")||"null")||{
+wake:"07:30",
+back:"18:00",
+lat:55.7961,
+lon:49.1064
+};
+
+function $(id){return document.getElementById(id)}
+
+function render(){
+$("wake").value=settings.wake;
+$("back").value=settings.back;
+$("lat").value=settings.lat;
+$("lon").value=settings.lon;
+
+$("wakeLabel").textContent="В "+settings.wake;
+$("backLabel").textContent="В "+settings.back;
+
+$("schedule").innerHTML=lessons.map((x,i)=>`
+<div class="lesson">
+<div class="time">${x.time}</div>
+<div>
+<div class="subject">${x.name}</div>
+<div class="small">ауд. ${x.room}</div>
+</div>
+<div class="end small">${x.end}</div>
+</div>
+`).join("");
+}
+
+function toggleSettings(){
+$("settings").classList.toggle("hidden")
+}
+
+function saveSettings(){
+settings={
+wake:$("wake").value,
+back:$("back").value,
+lat:Number($("lat").value),
+lon:Number($("lon").value)
+};
+
+localStorage.setItem("daySettings",JSON.stringify(settings));
+render();
+loadWeather();
+toggleSettings();
+}
+
+function clock(){
+let d=new Date();
+
+$("clock").textContent=d.toLocaleTimeString("ru-RU",{
+hour:"2-digit",
+minute:"2-digit"
+});
+
+$("date").textContent=d.toLocaleDateString("ru-RU",{
+weekday:"long",
+day:"numeric",
+month:"long"
+});
+}
+
+function weatherName(code){
+let m={
+0:"Ясно",
+1:"Преимущественно ясно",
+2:"Переменная облачность",
+3:"Пасмурно",
+45:"Туман",
+48:"Туман",
+51:"Морось",
+53:"Морось",
+55:"Морось",
+61:"Дождь",
+63:"Дождь",
+65:"Сильный дождь",
+71:"Снег",
+73:"Снег",
+75:"Сильный снег",
+80:"Ливни",
+81:"Ливни",
+82:"Сильные ливни",
+95:"Гроза"
+};
+return m[code]||"Погода";
+}
+
+async function loadWeather(){
+
+try{
+
+let url=
+`https://api.open-meteo.com/v1/forecast?latitude=${settings.lat}&longitude=${settings.lon}&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=1`;
+
+let r=await fetch(url);
+let j=await r.json();
+
+function findHour(time){
+
+let wanted=Number(time.split(":")[0]);
+let best=0;
+let diff=99;
+
+j.hourly.time.forEach((t,i)=>{
+let h=Number(t.substring(11,13));
+let d=Math.abs(h-wanted);
+
+if(d<diff){
+diff=d;
+best=i;
+}
+});
+
+return best;
+}
+
+let a=findHour(settings.wake);
+let b=findHour(settings.back);
+
+let ta=j.hourly.temperature_2m[a];
+let tb=j.hourly.temperature_2m[b];
+
+$("morningTemp").textContent=(ta>0?"+":"")+Math.round(ta)+"°";
+$("backTemp").textContent=(tb>0?"+":"")+Math.round(tb)+"°";
+
+$("morningWeather").textContent=
+weatherName(j.hourly.weather_code[a]);
+
+$("backWeather").textContent=
+weatherName(j.hourly.weather_code[b]);
+
+}catch(e){
+
+$("morningWeather").textContent="Нет соединения";
+$("backWeather").textContent="Нет соединения";
+
+}
+
+}
+
+render();
+clock();
+loadWeather();
+
+setInterval(clock,1000);
+
+</script>
+
+</body>
+</html>
